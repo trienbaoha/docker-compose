@@ -1,0 +1,67 @@
+captainVersion: 4
+caproverOneClickApp:
+    instructions:
+        start: Just a plain Docker Compose.
+        end: Docker Compose is deployed.
+########
+version: '3.3'
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper:3.4.6
+    volumes:
+      - zookeeper-data:/opt/zookeeper-3.4.6/data
+    ports:
+      - "2182:2181" # External port 2182 maps to internal port 2181
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - captain-overlay-network
+
+  kafka:
+    depends_on:
+      - zookeeper
+    image: wurstmeister/kafka:1.1.0
+    volumes:
+      - kafka-data:/kafka/kafka-logs
+    ports:
+      - "9093:9092" # External port 9093 maps to internal port 9092
+    restart: always
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: srv-captain--zookeeper:2181 # Connect to Zookeeper on port 2181
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 3000
+      KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE: 'true'
+      KAFKA_CONTROLLER_SHUTDOWN_ENABLE: 'true'
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_RETENTION_DAYS: 2
+      KAFKA_LOG_DIRS: /kafka/kafka-logs
+    networks:
+      - captain-overlay-network
+
+  kafdrop:
+    depends_on:
+      - kafka
+    image: obsidiandynamics/kafdrop
+    ports:
+      - "9000:9000" # Expose Kafdrop on port 9000
+    restart: always
+    environment:
+      KAFKA_BROKERCONNECT: srv-captain--kafka:9092
+      JVM_OPTS: "-Xms32M -Xmx64M"
+    networks:
+      - captain-overlay-network
+
+volumes:
+  zookeeper-data: {}
+  kafka-data: {}
+
+networks:
+  captain-overlay-network:
+    external: true
