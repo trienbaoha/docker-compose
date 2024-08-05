@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "dockerfileLines": [
+    "FROM statsd/statsd",
+    "EXPOSE 8125/udp"
+  ],
+  "caproverOneClickApp": {
+    "customNginxConfig": "location / {\nproxy_pass http://127.0.0.1:8125;\nproxy_set_header Host $host;\nproxy_set_header X-Real-IP $remote_addr;\nproxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\nproxy_http_version 1.1;\nproxy_set_header Connection '';\nchunked_transfer_encoding off;\nproxy_buffering off;\nproxy_cache off;\n}",
+    "instructions": {
+      "start": "This will set up StatsD with the correct UDP handling for CapRover.",
+      "end": "StatsD is now running with UDP support!"
+    }
+  }
+}
